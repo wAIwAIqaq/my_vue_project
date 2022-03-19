@@ -15,7 +15,7 @@ function patch(vnode:any, container:any){
    const {shapeFlag} = vnode;
    if(shapeFlag & ShapeFlags.ELEMENT){
       processElement(vnode, container);
-   } else if(shapeFlag & ShapeFlags.STATEFULCOMPONENT){
+   } else if(shapeFlag & ShapeFlags.STATEFUL_COMPONENT){
       processComponent(vnode, container)
    }
 }

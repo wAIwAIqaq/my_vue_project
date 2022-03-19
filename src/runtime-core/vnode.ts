@@ -13,5 +13,10 @@ export function createVNode(type:String, props?:Object, children?:any){
     } else if(Array.isArray(children)){
         VNode.shapeFlag |= ShapeFlags.ARRAY_CHILDREN;
     }
+    if(VNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT){
+        if(typeof children === 'object'){
+            VNode.shapeFlag |= ShapeFlags.SLOT_CHILDREN;
+        }
+    }
     return VNode;
 }
