@@ -29,10 +29,15 @@ const Consumer = {
     const foo = inject("foo");
     const bar = inject("bar");
     const baz = inject("baz", "bazDefault");
-    return { foo, bar, baz };
+    const bazFun = inject("bazFun", () => "bazFun");
+    return { foo, bar, baz, bazFun };
   },
   render() {
-    return h("div", {}, `Consumer: - ${this.foo} - ${this.bar} - ${this.baz}`);
+    return h(
+      "div",
+      {},
+      `Consumer: - ${this.foo} - ${this.bar} - ${this.baz} - ${this.bazFun}`
+    );
   },
 };
 
