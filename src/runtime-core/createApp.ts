@@ -1,6 +1,7 @@
 import { createVNode } from "./vnode";
-import { render } from "./render";
-export function createApp(rootComponent:any){
+
+export function createAppAPI (render){
+   return  function createApp(rootComponent:any){
     return {
         mount(rootContainer:any){
             //先转化为虚拟节点vnode
@@ -10,4 +11,6 @@ export function createApp(rootComponent:any){
         }
     }
 }
+}
+
 
