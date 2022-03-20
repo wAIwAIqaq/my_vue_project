@@ -3,13 +3,15 @@ import { initSlots } from './componentSlots';
 import {PublicInstanceProxyHandlers} from './componentPublicInstance';
 import { shallowReadonly } from "../reactivity/reactive";
 import {emit} from './componetEmit';
-export function createComponentInstance(vnode:any){
+export function createComponentInstance(vnode:any,parent: any){
     const  instance = {
         vnode,
         type:vnode.type,
         setupState:{},
         props:{},
         slots:{},
+        provides:parent? parent.provides : {},
+        parent,
         emit:()=>{}
     }
     
@@ -59,6 +61,6 @@ export function getCurrentInstance(){
     return currentInstance;
 } 
 
-function setCurrentInstance(instance){
+function setCurrentInstance(instance: null){
    currentInstance = instance;   
 }
