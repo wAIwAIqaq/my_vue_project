@@ -5,7 +5,7 @@ function createElement(type) {
     return document.createElement(type);
 }
 
-function pathProp(el, key, val){
+function patchProp(el, key, val){
     console.log("patchProp——————————————");
     if(isOn(key)){
        const event = key.slice(2).toLocaleLowerCase();
@@ -24,7 +24,7 @@ function insert(el, parent){
 
 const render:any= createRender({
     createElement,
-    pathProp,
+    patchProp,
     insert
 })
 
