@@ -48,9 +48,32 @@ export function createRender(options){
       
       
    }
-   
+   const EMPTY_OBJ = {};
    function patchElement(n1, n2, container){
-      console.log(n1,n2,container);
+      const oldProps = n1.props || EMPTY_OBJ;
+      const newProps = n2.props || EMPTY_OBJ;
+      const el = (n2.el = n1.el);
+      patchProps(el,oldProps,newProps);
+   }
+
+   function patchProps(el,oldProps, newProps){
+      if(oldProps !== newProps){
+         for (const key in newProps) {
+            const prevProp = oldProps[key] ? oldProps[key] : null;
+            const nextProp = newProps[key];
+            if(prevProp !== nextProp){
+              hostPatchProp(el,key,prevProp,nextProp)
+            }
+         }
+         if(oldProps !== EMPTY_OBJ){
+            for (const key in oldProps) {
+               if(!(key in newProps)){
+                  hostPatchProp(el,key,oldProps[key],null)
+               }
+            }
+         }
+        
+      }
    }
 
    function processComponent(n1, n2:any, container:any,parentComponent){
@@ -88,7 +111,7 @@ export function createRender(options){
       
       for (const key in props) {
          const val = props[key]
-         hostPatchProp(el,key,val);
+         hostPatchProp(el,key,null,val);
       }
 
       // container.append(el);

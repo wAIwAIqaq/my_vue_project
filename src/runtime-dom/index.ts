@@ -1,24 +1,25 @@
 import {createRender} from '../runtime-core';
 import { isOn } from "../shared/index";
 function createElement(type) {
-    console.log("createElement——————————");
     return document.createElement(type);
 }
 
-function patchProp(el, key, val){
-    console.log("patchProp——————————————");
+function patchProp(el, key, prevVal, nextVal){
     if(isOn(key)){
        const event = key.slice(2).toLocaleLowerCase();
        el.addEventListener(event,()=>{
-          val();
+          nextVal();
        });
     }else{
-       el.setAttribute(key,val);
+       if(nextVal === undefined || nextVal === null){
+           el.removeAttribute(key);
+       }else{
+           el.setAttribute(key,nextVal);
+       }
     }
 }
 
 function insert(el, parent){
-    console.log("insert—————————————————");
     parent.append(el);
 }
 
