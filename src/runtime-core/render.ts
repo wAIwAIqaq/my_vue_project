@@ -5,7 +5,14 @@ import { createAppAPI } from "./createApp";
 import { Fragment,Text } from "./vnode";
 
 export function createRender(options){
-   const { createElement:hostCreateElement, patchProp:hostPatchProp, insert:hostInsert} = options;
+   const { 
+      createElement:hostCreateElement,
+      patchProp:hostPatchProp,
+      insert:hostInsert, 
+      remove:hostRemove,
+      setElementText: hostSetElementText,
+      setElementArray: hostSetElementArray
+   } = options;
    
    function render(vnode:any,container:any){
      // shapeFlags
@@ -43,19 +50,56 @@ export function createRender(options){
          mountElement(n2,container,parentComponent);
       }else{
          // update
-         patchElement(n1 ,n2, container)
+         patchElement(n1 ,n2, container, parentComponent)
       }
       
       
    }
    const EMPTY_OBJ = {};
-   function patchElement(n1, n2, container){
+   function patchElement(n1, n2, container,parentComponent){
       const oldProps = n1.props || EMPTY_OBJ;
       const newProps = n2.props || EMPTY_OBJ;
       const el = (n2.el = n1.el);
+      patchChildren(n1, n2, el, parentComponent);
       patchProps(el,oldProps,newProps);
    }
 
+   function patchChildren(n1, n2, container, parentComponent){
+      const prevShapeFlag = n1.shapeFlag;
+      const nextShapeFlag = n2.shapeFlag;
+      if(nextShapeFlag & ShapeFlags.TEXT_CHILDREN){
+          if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+             // array => text
+             // 1.把老的children清空 
+             unmountChildren(n1.children);
+             // 2.set 新的textchildren
+             // 如果 n1.children !== n2.children 则直接把n2的文本值设置为container的textContent
+             // text => text 同时需执行以下
+             if(n1.children !== n2.children){
+               hostSetElementText(container, n2.children)
+             }
+          }
+      }else{
+         if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN){
+            // array => text
+            // 1.把容器的文本内容清空
+            hostSetElementText(container,'');
+            mountChildren(n2.children,container,parentComponent);
+         } else {
+           // array => array
+           unmountChildren(n1.children);
+           mountChildren(n2.children,container,parentComponent);
+         }
+      }
+   }
+   
+   function unmountChildren(children){
+      for(let i= 0; i<children.length;i++){
+         const el = children[i].el;
+         // remove
+         hostRemove(el);
+      }
+   }
    function patchProps(el,oldProps, newProps){
       if(oldProps !== newProps){
          for (const key in newProps) {
