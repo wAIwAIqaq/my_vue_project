@@ -127,8 +127,8 @@ export function createRender(options){
          if(i<=e2){
             let nextPos = i;
             // 如果 e1 >= 0则 anchor 为null添加后面
-            // 如果 el < 0 则 anchor 为e2 -1 添加前面 之后锚点后移 保持顺序
-            let anchor = e1 >= 0 ? null : e2 -1;
+            // 如果 el < 0 则 anchor 为i 添加前面 之后锚点后移 保持顺序
+            let anchor = e1 >= 0 ? null : i;
             while(nextPos<=e2){
                patch(null,c2[nextPos],container,parentComponent, anchor);
                nextPos++;
@@ -138,7 +138,6 @@ export function createRender(options){
             }
          }
       }
-      // 新的比老的多 右侧对比
       console.log(i,e1,e2);
    }
 
