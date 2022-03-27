@@ -15,7 +15,6 @@ export default {
   },
   render() {
     const self = this;
-    console.log(self.isChange);
     return self.isChange === true
       ? h("div", {}, nextChildren)
       : h("div", {}, prevChildren);

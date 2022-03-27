@@ -2,12 +2,13 @@ import { ShapeFlags,getShapeFlag } from "../shared/shapeFlags";
 
 export const Fragment = Symbol("Fragment");
 export const Text = Symbol("Text");
-export function createVNode(type:any, props?:Object, children?:any){
+export function createVNode(type:any, props?:any, children?:any){
     const VNode =  {
         el:null,
         type,
-        props:props || {},
+        props: props || {},
         children,
+        key: props?.key,
         shapeFlag:getShapeFlag(type),
     }
     // children?

@@ -21,7 +21,7 @@ export function createRender(options){
       patch(null, vnode, container);
    }
 
-   function patch(n1, n2:any, container:any,parentComponent:any = null){
+   function patch(n1, n2:any, container:any,parentComponent:any = null,anchor:any = null){
       // todo 判断是不是一个element
       // 处理组件
       // shapeflag 判断
@@ -36,7 +36,7 @@ export function createRender(options){
             break;
          default:
             if(shapeFlag & ShapeFlags.ELEMENT){
-               processElement(n1, n2, container, parentComponent);
+               processElement(n1, n2, container, parentComponent, anchor);
             } else if(shapeFlag & ShapeFlags.STATEFUL_COMPONENT){
                processComponent(n1, n2, container, parentComponent)
             }
@@ -44,10 +44,10 @@ export function createRender(options){
       }
    }
 
-   function processElement(n1, n2: any, container: any,parentComponent) {
+   function processElement(n1, n2: any, container: any,parentComponent,anchor) {
       if(!n1){
          // init
-         mountElement(n2,container,parentComponent);
+         mountElement(n2,container,parentComponent, anchor);
       }else{
          // update
          patchElement(n1 ,n2, container, parentComponent)
@@ -67,16 +67,18 @@ export function createRender(options){
    function patchChildren(n1, n2, container, parentComponent){
       const prevShapeFlag = n1.shapeFlag;
       const nextShapeFlag = n2.shapeFlag;
+      const c1 = n1.children;
+      const c2 = n2.children;
       if(nextShapeFlag & ShapeFlags.TEXT_CHILDREN){
           if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
              // array => text
              // 1.把老的children清空 
-             unmountChildren(n1.children);
+             unmountChildren(c1);
              // 2.set 新的textchildren
              // 如果 n1.children !== n2.children 则直接把n2的文本值设置为container的textContent
              // text => text 同时需执行以下
-             if(n1.children !== n2.children){
-               hostSetElementText(container, n2.children)
+             if(c1 !== c2){
+               hostSetElementText(container, c2)
              }
           }
       }else{
@@ -84,13 +86,65 @@ export function createRender(options){
             // array => text
             // 1.把容器的文本内容清空
             hostSetElementText(container,'');
-            mountChildren(n2.children,container,parentComponent);
+            mountChildren(c2,container,parentComponent);
          } else {
-           // array => array
-           unmountChildren(n1.children);
-           mountChildren(n2.children,container,parentComponent);
+           // array diff => array
+           patchKeyedChildren(c1, c2, container, parentComponent);
          }
       }
+   }
+
+   function patchKeyedChildren(c1, c2, container, parentComponent) {
+      console.log('patch');
+      let i = 0;
+      let e1 = c1.length - 1;
+      let e2 = c2.length - 1;
+      // 左侧对比
+      while(i <= e1 && i <= e2){
+         const n1 = c1[i];
+         const n2 = c2[i];
+         if(isSameVNodeType(n1,n2)){
+            patch(n1, n2, container, parentComponent)
+         }else{
+            break;
+         }
+         i++;
+      }
+      // 右侧对比
+      while(i <= e1 && i <= e2){
+         const n1 = c1[e1];
+         const n2 = c2[e2];
+         if(isSameVNodeType(n1,n2)){
+            patch(n1, n2, container, parentComponent)
+         }else{
+            break;
+         }
+         e1--;
+         e2--;
+      }
+      // 新的比老的多 
+      if(i > e1){
+         if(i<=e2){
+            let nextPos = i;
+            // 如果 e1 >= 0则 anchor 为null添加后面
+            // 如果 el < 0 则 anchor 为e2 -1 添加前面 之后锚点后移 保持顺序
+            let anchor = e1 >= 0 ? null : e2 -1;
+            while(nextPos<=e2){
+               patch(null,c2[nextPos],container,parentComponent, anchor);
+               nextPos++;
+               if(anchor !== null){
+                  anchor++;
+               }
+            }
+         }
+      }
+      // 新的比老的多 右侧对比
+      console.log(i,e1,e2);
+   }
+
+   function isSameVNodeType(n1,n2){
+      return n1.type === n2.type && n1.key === n2.key
+
    }
    
    function unmountChildren(children){
@@ -135,7 +189,7 @@ export function createRender(options){
       container.append(textNode);
    }
    
-   function mountElement(vnode: any, container: any ,parentComponent) {
+   function mountElement(vnode: any, container: any ,parentComponent, anchor) {
       // canvas
       // new Element()
       // createElement()
@@ -159,7 +213,7 @@ export function createRender(options){
       }
 
       // container.append(el);
-      hostInsert(el,container);
+      hostInsert(el,container,anchor);
    }
    
    function mountChildren(children: any[],container: any,parentComponent){
