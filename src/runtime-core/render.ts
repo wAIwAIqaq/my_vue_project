@@ -122,8 +122,7 @@ export function createRender(options){
          e1--;
          e2--;
       }
-      // 新的比老的多 
-      if(i > e1){
+      if(i > e1){// 新的比老的多 
          if(i<=e2){
             let nextPos = i;
             // 如果 e1 >= 0则 anchor 为null添加后面
@@ -137,8 +136,13 @@ export function createRender(options){
                }
             }
          }
+      }else if(i > e2){ // 新的比老的少
+         const anchorIndex = i + e1 - e2 ;
+         while(i < anchorIndex){
+            hostRemove(c1[i].el);
+            i++;
+         }
       }
-      console.log(i,e1,e2);
    }
 
    function isSameVNodeType(n1,n2){
