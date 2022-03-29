@@ -142,6 +142,40 @@ export function createRender(options){
             hostRemove(c1[i].el);
             i++;
          }
+      } else{
+         // 中间对比
+         let s1 = i;
+         let s2 = i;
+         let isPatchedCount = 0;
+         const keyToNewIndexMap = new Map();
+         for(let i = s2;i <= e2; i++){
+            const nextChild = c2[i];
+            keyToNewIndexMap.set(nextChild.key, i);
+         }
+         for(let i = s1;i <= e1; i++ ){
+            const prevChild = c1[i];
+            if(isPatchedCount >= e2 - i + 1){
+               hostRemove(prevChild.el);
+               continue;
+            }
+            let newIndex;
+            if(prevChild.key != null){
+               newIndex = keyToNewIndexMap.get(prevChild.key);
+            }else{
+               for(let j = s2;j<e2;i++){
+                  if(isSameVNodeType(prevChild,c2[j])){
+                     newIndex = j;
+                     break;
+                  }
+               }
+            }
+            if(newIndex === undefined){
+               hostRemove(prevChild.el);
+            }else{
+               patch(prevChild, c2[newIndex], container,parentComponent,null);
+               isPatchedCount++;
+            }
+         }
       }
    }
 
