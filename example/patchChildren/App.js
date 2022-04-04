@@ -12,7 +12,7 @@ const App = {
       {
         tId: 1,
       },
-      [h("p", {}, "主页"), h(ArrayToArray)]
+      [h("p", {}, "主页"), h(ArrayToText)]
     );
   },
 

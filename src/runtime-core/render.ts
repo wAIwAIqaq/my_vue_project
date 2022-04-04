@@ -3,7 +3,7 @@ import { ShapeFlags } from "../shared/shapeFlags";
 import { createComponentInstance, setupInstance } from "./component";
 import { createAppAPI } from "./createApp";
 import { Fragment,Text } from "./vnode";
-
+import {shouldUpdateComponent} from './componentUpdateUtils';
 export function createRender(options){
    const { 
       createElement:hostCreateElement,
@@ -70,17 +70,19 @@ export function createRender(options){
       const c1 = n1.children;
       const c2 = n2.children;
       if(nextShapeFlag & ShapeFlags.TEXT_CHILDREN){
-          if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
-             // array => text
-             // 1.把老的children清空 
-             unmountChildren(c1);
-             // 2.set 新的textchildren
-             // 如果 n1.children !== n2.children 则直接把n2的文本值设置为container的textContent
-             // text => text 同时需执行以下
-             if(c1 !== c2){
-               hostSetElementText(container, c2)
-             }
-          }
+         if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+            // array => text
+            // 1.把老的children清空 
+            unmountChildren(c1);
+            // 2.set 新的textchildren
+            // 如果 n1.children !== n2.children 则直接把n2的文本值设置为container的textContent
+            // text => text 同时需执行以下
+            hostSetElementText(container,c2);
+         }else{
+            hostSetElementText(container,c2);
+         }
+
+          
       }else{
          if(prevShapeFlag & ShapeFlags.TEXT_CHILDREN){
             // array => text
@@ -267,6 +269,7 @@ export function createRender(options){
       }
    }
    function patchProps(el,oldProps, newProps){
+      // 两个props Object判断不相等？
       if(oldProps !== newProps){
          for (const key in newProps) {
             const prevProp = oldProps[key] ? oldProps[key] : null;
@@ -287,7 +290,30 @@ export function createRender(options){
    }
 
    function processComponent(n1, n2:any, container:any,parentComponent){
-      mountComponent(n2,container, parentComponent)
+      if(!n1){
+         mountComponent(n2,container, parentComponent)
+      }else{
+         updateComponent(n1,n2);
+      }
+      
+   }
+ 
+   function updateComponent(n1,n2){
+      const instance = n2.component = n1.component;
+      if(shouldUpdateComponent(n1,n2)){
+         console.log("组件更新",n1,n2);
+         instance.next = n2;
+         instance.update();
+      }else{
+         n2.el = n1.el;
+         n2.vnode = n2;
+      }
+   }
+
+   function updateComponentPreRender(instance,nextVNode){
+      instance.vnode = nextVNode;
+      instance.next = null;
+      instance.props = nextVNode.props;
    }
    
    function processFragment(n1, n2:any, container:any,parentComponent){
@@ -335,14 +361,14 @@ export function createRender(options){
    }
    
    function mountComponent(initalVNode:any,container:any,parentComponent:any){
-      const instance = createComponentInstance(initalVNode,parentComponent);
+      const instance = (initalVNode.component = createComponentInstance(initalVNode, parentComponent));
       setupInstance(instance);
       setupRenderEffect(instance,initalVNode,container)
    }
    
    function setupRenderEffect(instance: any,initalVNode,container:any) {
       // 拆分更新与初始化
-      effect(()=>{
+      instance.update = effect(()=>{
          if (!instance.isMounted){
             console.log("init");
             const { proxy } = instance;   
@@ -355,7 +381,11 @@ export function createRender(options){
             instance.isMounted = true;
          }else {
             console.log("update");
-            const { proxy } = instance; 
+            const { proxy,next,vnode } = instance; 
+            if(next){
+               next.el = vnode.el;
+               updateComponentPreRender(instance,next);
+            }
             const prevSubTree = instance.subTree; 
             const subTree = (instance.subTree = instance.render.call(proxy));
             // vnode => patch
