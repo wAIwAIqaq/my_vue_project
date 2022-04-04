@@ -50,21 +50,21 @@ export function createRender(options){
          mountElement(n2,container,parentComponent, anchor);
       }else{
          // update
-         patchElement(n1 ,n2, container, parentComponent)
+         patchElement(n1 ,n2, container,parentComponent,anchor)
       }
       
       
    }
    const EMPTY_OBJ = {};
-   function patchElement(n1, n2, container,parentComponent){
+   function patchElement(n1, n2, container,parentComponent,anchor){
       const oldProps = n1.props || EMPTY_OBJ;
       const newProps = n2.props || EMPTY_OBJ;
       const el = (n2.el = n1.el);
-      patchChildren(n1, n2, el, parentComponent);
+      patchChildren(n1, n2, el,parentComponent,anchor);
       patchProps(el,oldProps,newProps);
    }
 
-   function patchChildren(n1, n2, container, parentComponent){
+   function patchChildren(n1, n2, container,parentComponent,anchor){
       const prevShapeFlag = n1.shapeFlag;
       const nextShapeFlag = n2.shapeFlag;
       const c1 = n1.children;
@@ -89,16 +89,17 @@ export function createRender(options){
             mountChildren(c2,container,parentComponent);
          } else {
            // array diff => array
-           patchKeyedChildren(c1, c2, container, parentComponent);
+           patchKeyedChildren(c1, c2, container, parentComponent,anchor);
          }
       }
    }
 
-   function patchKeyedChildren(c1, c2, container, parentComponent) {
-      console.log('patch');
+   function patchKeyedChildren(c1, c2, container, parentComponent,parentAnchor) {
+      console.log('patch child');
       let i = 0;
       let e1 = c1.length - 1;
       let e2 = c2.length - 1;
+      const l2 = c2.length;
       // 左侧对比
       while(i <= e1 && i <= e2){
          const n1 = c1[i];
@@ -124,16 +125,19 @@ export function createRender(options){
       }
       if(i > e1){// 新的比老的多 
          if(i<=e2){
-            let nextPos = i;
-            // 如果 e1 >= 0则 anchor 为null添加后面
-            // 如果 el < 0 则 anchor 为i 添加前面 之后锚点后移 保持顺序
-            let anchor = e1 >= 0 ? null : i;
-            while(nextPos<=e2){
-               patch(null,c2[nextPos],container,parentComponent, anchor);
-               nextPos++;
-               if(anchor !== null){
-                  anchor++;
-               }
+            // 如果是这种情况的话就说明 e2 也就是新节点的数量大于旧节点的数量
+            // 也就是说新增了 vnode
+            // 应该循环 c2
+            // 锚点的计算：新的节点有可能需要添加到尾部，也可能添加到头部，所以需要指定添加的问题
+            // 要添加的位置是当前的位置(e2 开始)+1
+            // 因为对于往左侧添加的话，应该获取到 c2 的第一个元素
+            // 所以我们需要从 e2 + 1 取到锚点的位置
+            const nextPos = e2 + 1;
+            const anchor = nextPos < l2 ? c2[nextPos].el : parentAnchor;
+            while (i <= e2) {
+              console.log(`需要新创建一个 vnode: ${c2[i].key}`);
+              patch(null, c2[i], container, parentComponent,anchor);
+              i++;
             }
          }
       }else if(i > e2){ // 新的比老的少
@@ -147,14 +151,19 @@ export function createRender(options){
          let s1 = i;
          let s2 = i;
          let isPatchedCount = 0;
+         const toBePatched = e2 - s2 + 1;
          const keyToNewIndexMap = new Map();
+         const newIndexToOldIndexMap = new Array(toBePatched);
+         let moved = false;
+         let maxNewIndexSoFar = 0;
+         for (let i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0;
          for(let i = s2;i <= e2; i++){
             const nextChild = c2[i];
             keyToNewIndexMap.set(nextChild.key, i);
          }
          for(let i = s1;i <= e1; i++ ){
             const prevChild = c1[i];
-            if(isPatchedCount >= e2 - i + 1){
+            if(isPatchedCount >= toBePatched){
                hostRemove(prevChild.el);
                continue;
             }
@@ -162,7 +171,7 @@ export function createRender(options){
             if(prevChild.key != null){
                newIndex = keyToNewIndexMap.get(prevChild.key);
             }else{
-               for(let j = s2;j<e2;i++){
+               for(let j = s2;j <= e2;j++){
                   if(isSameVNodeType(prevChild,c2[j])){
                      newIndex = j;
                      break;
@@ -172,12 +181,78 @@ export function createRender(options){
             if(newIndex === undefined){
                hostRemove(prevChild.el);
             }else{
+               if(newIndex >= maxNewIndexSoFar){
+                  maxNewIndexSoFar = newIndex;
+               }else{
+                  moved = true;
+               }
+               newIndexToOldIndexMap[newIndex - s2] = i + 1; 
                patch(prevChild, c2[newIndex], container,parentComponent,null);
                isPatchedCount++;
             }
          }
+         const increasingNewIndexSequence = moved ? getSequence(newIndexToOldIndexMap) : [];
+         let j = increasingNewIndexSequence.length - 1;
+         for (let i = toBePatched - 1; i >= 0 ; i--) {
+            const nextIndex = i + s2;
+            const nextChild = c2[nextIndex];
+            const anchor = nextIndex + 1  < l2 ? c2[nextIndex+1].el : null;
+            if(newIndexToOldIndexMap[i] === 0){
+               patch(null,nextChild,container,parentComponent,anchor);
+            }else if(moved){
+               // 如果判断需要moved
+               if(j<0 || i !== increasingNewIndexSequence[j]){
+                  console.log(anchor);
+                   hostInsert(nextChild.el, container, anchor)
+               }else{
+                  j--;
+               }
+            }
+         }
       }
    }
+      
+   // 获取最长递增子序列算法
+   function getSequence(arr:number[]):number[] {
+      const p = arr.slice();
+      const result = [0];
+      let i, j, u, v, c;
+      const len = arr.length;
+      for (i = 0; i < len; i++) {
+        const arrI = arr[i];
+        if (arrI !== 0) {
+          j = result[result.length - 1];
+          if (arr[j] < arrI) {
+            p[i] = j;
+            result.push(i);
+            continue;
+          }
+          u = 0;
+          v = result.length - 1;
+          while (u < v) {
+            c = (u + v) >> 1;
+            if (arr[result[c]] < arrI) {
+              u = c + 1;
+            } else {
+              v = c; 
+            }
+          }
+          if (arrI < arr[result[u]]) {
+            if (u > 0) {
+              p[i] = result[u - 1];
+            }
+            result[u] = i;
+          }
+        }
+      }
+      u = result.length;
+      v = result[u - 1];
+      while (u-- > 0) {
+        result[u] = v;
+        v = p[v];
+      }
+      return result;
+    }
 
    function isSameVNodeType(n1,n2){
       return n1.type === n2.type && n1.key === n2.key
