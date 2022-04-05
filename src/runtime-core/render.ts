@@ -3,7 +3,9 @@ import { ShapeFlags } from "../shared/shapeFlags";
 import { createComponentInstance, setupInstance } from "./component";
 import { createAppAPI } from "./createApp";
 import { Fragment,Text } from "./vnode";
-import {shouldUpdateComponent} from './componentUpdateUtils';
+import { shouldUpdateComponent } from './componentUpdateUtils';
+import { queueJob } from './scheduler';
+
 export function createRender(options){
    const { 
       createElement:hostCreateElement,
@@ -393,6 +395,11 @@ export function createRender(options){
             patch(prevSubTree, subTree,container,instance)
             // element => mounted
             initalVNode.el = subTree.el;
+         }
+      },{
+         scheduler(){
+            console.log("update-----scheduler");
+            queueJob(instance.update);
          }
       })
    }
