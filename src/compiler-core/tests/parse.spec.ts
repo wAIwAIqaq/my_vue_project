@@ -14,4 +14,14 @@ describe('Parse',()=>{
              })    
          })
      })
+     describe('element',()=>{
+        const ast = baseParse('<div></div>');
+        it('simple element div',()=>{
+            expect(ast.children[0]).toStrictEqual({
+               type:NodeTypes.ELEMENT,
+               tag:"div"
+            })
+
+        })
+     })
 })
