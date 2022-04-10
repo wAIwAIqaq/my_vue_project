@@ -1,5 +1,10 @@
 import { NodeTypes } from "./ast";
-import { helperMapName, TO_DISPLAY_STRING } from "./runtimeHelpers";
+import { isString } from "../../shared";
+import {
+  CREATE_ELEMENT_VNODE,
+  helperMapName,
+  TO_DISPLAY_STRING,
+} from "./runtimeHelpers";
 
 export function generate(ast) {
   const context = codegenContext();
@@ -43,6 +48,12 @@ function genNode(node, context) {
     case NodeTypes.SIMPLE_EXPRESSION:
       getExpression(node, context);
       break;
+    case NodeTypes.ELEMENT:
+      getElement(node, context);
+      break;
+    case NodeTypes.COMPOUND_EXPRESSION:
+      getCompoundExpression(node, context);
+      break;
     default:
       break;
   }
@@ -61,7 +72,7 @@ function getFunctionPreamble(context, ast) {
 
 function genText(node: any, context: any) {
   const { push } = context;
-  push(`'${node.content}'`);
+  push(`"${node.content}"`);
 }
 function genInterpolation(node: any, context: any) {
   const { push, helper } = context;
@@ -72,4 +83,42 @@ function genInterpolation(node: any, context: any) {
 function getExpression(node: any, context: any) {
   const { push } = context;
   push(`${node.content}`);
+}
+function getElement(node: any, context: any) {
+  const { push, helper } = context;
+  const { tag, children, props } = node;
+  push(`_${helper(CREATE_ELEMENT_VNODE)}(`);
+
+  genNodeList(genNullalbe([tag, props, children]), context);
+  // genNode(children, context);
+  push(")");
+}
+function getCompoundExpression(node: any, context: any) {
+  const { children } = node;
+  const { push } = context;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (isString(child)) {
+      push(child);
+    } else {
+      genNode(child, context);
+    }
+  }
+}
+function genNullalbe(args: any[]) {
+  return args.map((arg) => arg || "null");
+}
+function genNodeList(nodes, context) {
+  const { push } = context;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (isString(node)) {
+      push(node);
+    } else {
+      genNode(node, context);
+    }
+    if (i < nodes.length - 1) {
+      push(",");
+    }
+  }
 }
